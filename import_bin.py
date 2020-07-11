@@ -58,9 +58,25 @@ def make_material(mesh, submesh, mats, tex_db):
     mat.use_nodes = True
     out = mat.node_tree.nodes[1]
     mat.node_tree.nodes.remove(mat.node_tree.nodes[0])
+
+    if dmat.shader == "CLOTH":
+        shader_cloth(mat, dmat, tex_db, out)
+    elif dmat.shader == "ITEM":
+        shader_item(mat, dmat, tex_db)
+    else:
+        shader_cloth(mat, dmat, tex_db, out)
+
+    mat.use_backface_culling = True
+    mat.blend_method = "CLIP"
+    mesh.materials.append(mat)
+
+
+def shader_cloth(mat, dmat, tex_db, out):
     bsdf = mat.node_tree.nodes.new("ShaderNodeEeveeSpecular")
 
     for tex in dmat.textures:
+        if tex_db is None:
+            break
         tex_name = tex_db.entries[tex.id]
         try:
             image = bpy.data.images[tex_name]
@@ -70,6 +86,7 @@ def make_material(mesh, submesh, mats, tex_db):
                 bsdf.inputs[2].default_value = 0.4
             # COLOR MAP
             if tex.flags.map == 1 and "TOONCURVE" not in tex_name:
+                imnode.name = "Diffuse"
                 mat.node_tree.links.new(bsdf.inputs[0], imnode.outputs[0])
                 mix = mat.node_tree.nodes.new("ShaderNodeMath")
                 mix.operation = "SUBTRACT"
@@ -78,6 +95,7 @@ def make_material(mesh, submesh, mats, tex_db):
                 mat.node_tree.links.new(bsdf.inputs[4], mix.outputs[0])
             #SPECULAR MAP
             elif tex.flags.map == 3:
+                imnode.name = "Specular"
                 mix = mat.node_tree.nodes.new("ShaderNodeMixRGB")
                 mix.blend_type = "MULTIPLY"
                 mix.inputs[0].default_value = 1.
@@ -87,10 +105,34 @@ def make_material(mesh, submesh, mats, tex_db):
 
         except KeyError:
             print(f"Skipping `{tex_name}` as it's not loaded")
-
     mat.node_tree.links.new(out.inputs[0], bsdf.outputs[0])
-    mat.use_backface_culling = True
-    mesh.materials.append(mat)
+
+
+def shader_item(mat, dmat, tex_db):
+    out = mat.node_tree.nodes[-1]
+    bsdf = mat.node_tree.nodes.new("ShaderNodeEmission")
+    bsdf.inputs[1].default_value = 5.
+    trans = mat.node_tree.nodes.new("ShaderNodeBsdfTransparent")
+    mix = mat.node_tree.nodes.new("ShaderNodeMixShader")
+    mat.node_tree.links.new(mix.inputs[1], trans.outputs[0])
+    mat.node_tree.links.new(mix.inputs[2], bsdf.outputs[0])
+    for tex in dmat.textures:
+        if tex_db is None:
+            break
+        tex_name = tex_db.entries[tex.id]
+        try:
+            image = bpy.data.images[tex_name]
+            imnode = mat.node_tree.nodes.new("ShaderNodeTexImage")
+            imnode.image = image
+            # COLOR MAP
+            if tex.flags.map == 1 and "TOONCURVE" not in tex_name:
+                mat.node_tree.links.new(bsdf.inputs[0], imnode.outputs[0])
+                mat.node_tree.links.new(mix.inputs[0], imnode.outputs[1])
+
+        except KeyError:
+            print(f"Skipping `{tex_name}` as it's not loaded")
+    print("going to connect to out")
+    mat.node_tree.links.new(out.inputs[0], mix.outputs[0])
 
 
 def make_mesh(dmesh, mats, skel, arm, tex_db):
