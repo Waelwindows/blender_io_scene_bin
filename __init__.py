@@ -58,6 +58,18 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
             default=False,
             )
 
+    tex_db_path: StringProperty(
+            name="Texture DB path",
+            description="The path to the game's respective texture db. (usually named tex_db.bin)",
+            subtype="FILE_PATH",
+            )
+
+    import_textures: BoolProperty(
+            name="Import textures",
+            description="Imports textures from the corresponding _tex.bin. (Requires tex_db to be set)",
+            default=True,
+            )
+
     def draw(self, context):
         pass
 
@@ -79,9 +91,13 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
                 print(txp_path)
                 object_set = objset.object_set(path)
                 atlas = txp.read(txp_path)
-                tex_db = diva_db.tex.read_db("/home/waelwindows/rust/diva_db/assets/aft_tex_db.bin")
-                tex_names = [tex_db.entries[x] for x in object_set.tex_ids]
-                import_txp.make_images(atlas, tex_names)
+                if self.tex_db_path == "":
+                    tex_db = None
+                else:
+                    tex_db = diva_db.tex.read_db(self.tex_db_path)
+                tex_names = [tex_db.entries[x] if tex_db else "" for x in object_set.tex_ids]
+                if self.import_textures:
+                    import_txp.make_images(atlas, tex_names)
                 for obj in object_set.objects:
                     import_bin.make_object(obj, tex_db, self.connect_child)
             ret = {'FINISHED'}
@@ -109,6 +125,8 @@ class BIN_PT_import_include(bpy.types.Panel):
         operator = sfile.active_operator
 
         layout.prop(operator, "connect_child")
+        layout.prop(operator, "tex_db_path")
+        layout.prop(operator, "import_textures")
 
 def menu_func_import(self, context):
     self.layout.operator(ImportBIN.bl_idname, text="SEGA Object Set (_obj.bin)")
