@@ -6,6 +6,18 @@ import itertools
 import imbuf
 from . import txp
 from . import diva_db
+from bpy_extras import image_utils
+
+def import_textures(path, tex_names):
+    for name in tex_names:
+        print(f"importing {name}")
+        image = image_utils.load_image(
+                    f"{name}.png",
+                    dirname=path,
+                    place_holder=True,
+                    recursive=True,
+                )
+        image.name = name
 
 def make_images(txp, tex_names):
     for (i, map) in enumerate(txp.maps):

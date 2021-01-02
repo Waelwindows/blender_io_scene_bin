@@ -85,7 +85,7 @@ def shader_cloth(mat, dmat, tex_db, out):
             if "TOONCURVE" in tex_name:
                 bsdf.inputs[2].default_value = 0.4
             # COLOR MAP
-            if tex.flags.map == 1 and "TOONCURVE" not in tex_name:
+            if tex.flags.map == 1 and "TOONCURVE" not in tex_name and "SDW" not in tex_name:
                 imnode.name = "Diffuse"
                 mat.node_tree.links.new(bsdf.inputs[0], imnode.outputs[0])
                 mix = mat.node_tree.nodes.new("ShaderNodeMath")

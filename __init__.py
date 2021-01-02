@@ -65,7 +65,7 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
             )
 
     import_textures: BoolProperty(
-            name="Import textures",
+            name="Import textures from TXP",
             description="Imports textures from the corresponding _tex.bin. (Requires tex_db to be set)",
             default=True,
             )
@@ -98,6 +98,8 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
                 tex_names = [tex_db.entries[x] if tex_db else "" for x in object_set.tex_ids]
                 if self.import_textures:
                     import_txp.make_images(atlas, tex_names)
+                else:
+                    import_txp.import_textures(dirname, tex_names)
                 for obj in object_set.objects:
                     import_bin.make_object(obj, tex_db, self.connect_child)
             ret = {'FINISHED'}
