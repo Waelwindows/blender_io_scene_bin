@@ -47,6 +47,17 @@ def make_weights(obj, dmesh, skel, group_weights):
                 make_weight(i, id, obj, bone, bone_weights.third)
                 make_weight(i, id, obj, bone, bone_weights.fourth)
 
+def make_weights_submesh(obj, submesh, vbo, skel):
+    sub = vbo
+    for (i, bone_idx) in enumerate(submesh.bone_indicies):
+        bone = skel.bones[bone_idx]
+        weights = zip(range(0, len(vbo.weights)), vbo.weights)
+        for (id, bone_weights) in weights:
+            make_weight(i, id, obj, bone, bone_weights.first)
+            make_weight(i, id, obj, bone, bone_weights.second)
+            make_weight(i, id, obj, bone, bone_weights.third)
+            make_weight(i, id, obj, bone, bone_weights.fourth)
+
 def make_weight(i, id, obj, bone, group):
     if group.index is not None and group.index//3 == i:
         get_group(obj, bone).add([id], group.weight, "ADD")
@@ -141,71 +152,21 @@ def shader_item(mat, dmat, tex_db):
     print("going to connect to out")
     mat.node_tree.links.new(out.inputs[0], mix.outputs[0])
 
-
-def make_mesh(dmesh, mats, skel, arm, tex_db):
-    mesh = bpy.data.meshes.new(dmesh.name)  # add the new mesh
-    obj = bpy.data.objects.new(mesh.name, mesh)
+def make_submesh(submesh, vbo, mats, tex_db, skel):
+    mesh = bpy.data.meshes.new("temp")  # add the new mesh
+    obj = bpy.data.objects.new("temp", mesh)
     col = bpy.data.collections.get("Collection")
     col.objects.link(obj)
     bpy.context.view_layer.objects.active = obj
 
-    vbo = dmesh.vertex_buffers
-
     verts = vbo.positions
-    faces = dmesh.get_mesh_indicies()
+    faces = submesh.get_new_indices()
 
     mesh.from_pydata(verts, [], faces)
 
     mesh.polygons.foreach_set("use_smooth", [True] * len(mesh.polygons))
-
-    # normals = [*itertools.chain.from_iterable(vbo.normals)]
-    # mesh.vertices.foreach_set("normal", normals)
     mesh.use_auto_smooth = True
-    # normal custom verts on each axis
-    # mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
     mesh.normals_split_custom_set_from_vertices(vbo.normals)
-
-    mat_idx_faces = [len(x.indicies) for x in dmesh.submeshes]
-    mat_idx_faces.insert(0, 0)
-    midx_faces = list(pairwise(mat_idx_faces))
-    # print(type(mesh))
-    # print(dir(mesh))
-
-    # for (id, (start, end)) in zip(mat_idx, midx_faces):
-    #     print(f"id {id} from [{start}..{end}]")
-    #     mat_len = len(mesh.materials)
-    #     mat = bpy.data.materials.new(name=mats[id].name)
-    #     mat.use_nodes = True
-    #     mesh.materials.append(mat)
-    #     for face in mesh.polygons:
-    #         for submesh in dmesh.submeshes:
-    #             if face.vertices in submesh.indicies:
-    #                 face.material_index = mat_len
-
-    # print(f"mesh polys: {len(mesh.polygons)}")
-    # for poly in mesh.polygons:
-    #     poly.material_index = 39
-    for (submesh, (start, end)) in zip(dmesh.submeshes, midx_faces):
-        # print(f"submesh polys: {len(submesh.indicies)}")
-        if bpy.data.materials.find(mats[submesh.material_index].name) == -1:
-            make_material(mesh, submesh, mats, tex_db)
-        else:
-            bpy.ops.object.material_slot_add()
-            obj = bpy.context.active_object
-            mat_slot = obj.material_slots[-1]
-            mat_id = bpy.data.materials.find(mats[submesh.material_index].name)
-            mat_slot.material = bpy.data.materials[mat_id]
-        mat_idx = bpy.data.materials.find(mats[submesh.material_index].name)
-        # print(f"setting from {start} to {end}")
-        sub = dmesh.get_submesh_vbo(submesh)
-        for face in mesh.polygons[start:end]:
-            face.material_index = mat_idx
-        # for face in submesh.indicies:
-        #     for poly in mesh.polygons:
-        #         pids = poly.vertices
-        #         pids = (pids[0], pids[1], pids[2])
-        #         if face == pids:
-        #             poly.material_index = mat_idx
 
     make_uv(mesh, vbo.uv1)
     make_uv(mesh, vbo.uv2)
@@ -215,13 +176,125 @@ def make_mesh(dmesh, mats, skel, arm, tex_db):
     make_vertex_color(mesh, vbo.color1)
     make_vertex_color(mesh, vbo.color2)
 
-    make_weights(obj, dmesh, skel, vbo.weights)
+    make_weights_submesh(obj, submesh, vbo, skel)
 
+    if bpy.data.materials.find(mats[submesh.material_index].name) == -1:
+        make_material(mesh, submesh, mats, tex_db)
+    else:
+        bpy.ops.object.material_slot_add()
+        obj = bpy.context.active_object
+        mat_slot = obj.material_slots[-1]
+        mat_id = bpy.data.materials.find(mats[submesh.material_index].name)
+        mat_slot.material = bpy.data.materials[mat_id]
+    mat_idx = bpy.data.materials.find(mats[submesh.material_index].name)
+
+
+
+    return obj
+
+def make_mesh(dmesh, mats, skel, arm, tex_db):
+    prev = None
+    vbo = dmesh.vertex_buffers
+    cur = 0
+    for submesh in dmesh.submeshes:
+        sub_vbo = dmesh.get_submesh_vbo(submesh)
+        new = make_submesh(submesh, sub_vbo.vbo, mats, tex_db, skel)
+        if prev is None:
+            prev = new
+        else:
+            new.select_set(True)
+            prev.select_set(True)
+            name = new.name
+            bpy.ops.object.join()
+            bpy.ops.object.select_all(action='DESELECT')
+            prev = bpy.data.objects[name]
+    prev.name = dmesh.name
+    mesh = prev.data
     if skel is not None:
+        prev.select_set(True)
         bpy.ops.object.modifier_add(type='ARMATURE')
-        obj.modifiers["Armature"].object = arm
+        prev.modifiers["Armature"].object = arm
+
+# def make_mesh(dmesh, mats, skel, arm, tex_db):
+#     mesh = bpy.data.meshes.new(dmesh.name)  # add the new mesh
+#     obj = bpy.data.objects.new(mesh.name, mesh)
+#     col = bpy.data.collections.get("Collection")
+#     col.objects.link(obj)
+#     bpy.context.view_layer.objects.active = obj
+
+#     vbo = dmesh.vertex_buffers
+
+#     verts = vbo.positions
+#     faces = dmesh.get_mesh_indicies()
+
+#     mesh.from_pydata(verts, [], faces)
+
+#     mesh.polygons.foreach_set("use_smooth", [True] * len(mesh.polygons))
+
+#     # normals = [*itertools.chain.from_iterable(vbo.normals)]
+#     # mesh.vertices.foreach_set("normal", normals)
+#     mesh.use_auto_smooth = True
+#     # normal custom verts on each axis
+#     # mesh.normals_split_custom_set([(0, 0, 0) for l in mesh.loops])
+#     mesh.normals_split_custom_set_from_vertices(vbo.normals)
+
+#     mat_idx_faces = [len(x.indicies) for x in dmesh.submeshes]
+#     mat_idx_faces.insert(0, 0)
+#     midx_faces = list(pairwise(mat_idx_faces))
+#     # print(type(mesh))
+#     # print(dir(mesh))
+
+#     # for (id, (start, end)) in zip(mat_idx, midx_faces):
+#     #     print(f"id {id} from [{start}..{end}]")
+#     #     mat_len = len(mesh.materials)
+#     #     mat = bpy.data.materials.new(name=mats[id].name)
+#     #     mat.use_nodes = True
+#     #     mesh.materials.append(mat)
+#     #     for face in mesh.polygons:
+#     #         for submesh in dmesh.submeshes:
+#     #             if face.vertices in submesh.indicies:
+#     #                 face.material_index = mat_len
+
+#     # print(f"mesh polys: {len(mesh.polygons)}")
+#     # for poly in mesh.polygons:
+#     #     poly.material_index = 39
+#     # for (submesh, (start, end)) in zip(dmesh.submeshes, midx_faces):
+#     #     # print(f"submesh polys: {len(submesh.indicies)}")
+#     #     if bpy.data.materials.find(mats[submesh.material_index].name) == -1:
+#     #         make_material(mesh, submesh, mats, tex_db)
+#     #     else:
+#     #         bpy.ops.object.material_slot_add()
+#     #         obj = bpy.context.active_object
+#     #         mat_slot = obj.material_slots[-1]
+#     #         mat_id = bpy.data.materials.find(mats[submesh.material_index].name)
+#     #         mat_slot.material = bpy.data.materials[mat_id]
+#     #     mat_idx = bpy.data.materials.find(mats[submesh.material_index].name)
+#     #     # print(f"setting from {start} to {end}")
+#     #     sub = dmesh.get_submesh_vbo(submesh)
+#     #     # for face in mesh.polygons[start:end]:
+#     #     #     face.material_index = mat_idx
+#     #     for face in submesh.indicies:
+#     #         for poly in mesh.polygons:
+#     #             pids = poly.vertices
+#     #             pids = (pids[0], pids[1], pids[2])
+#     #             if face == pids:
+#     #                 poly.material_index = mat_idx
+
+#     make_uv(mesh, vbo.uv1)
+#     make_uv(mesh, vbo.uv2)
+#     make_uv(mesh, vbo.uv3)
+#     make_uv(mesh, vbo.uv4)
     
-    return mesh
+#     make_vertex_color(mesh, vbo.color1)
+#     make_vertex_color(mesh, vbo.color2)
+
+#     make_weights(obj, dmesh, skel, vbo.weights)
+
+#     if skel is not None:
+#         bpy.ops.object.modifier_add(type='ARMATURE')
+#         obj.modifiers["Armature"].object = arm
+    
+#     return mesh
 
 
 def make_arm(skel, connect_children):
@@ -275,6 +348,7 @@ def make_object(obj, tex_db, connect_children):
     root = bpy.context.active_object
     root.name = obj.name
     for mesh in obj.meshes:
+    # mesh = obj.meshes[0]
         mesh = make_mesh(mesh, obj.materials, obj.skeleton, root, tex_db)
         child = bpy.context.active_object
         bpy.ops.object.shade_smooth()
@@ -282,6 +356,8 @@ def make_object(obj, tex_db, connect_children):
             
     # for x in obj.skeleton.bones:
     #     print(f"id: {x.id}, {x.name} parent {x.parent}")
+    bpy.ops.object.select_all(action='DESELECT')
+    root.select_set(True)
     bpy.ops.transform.rotate(value=1.5708, orient_axis='X', orient_type='GLOBAL', orient_matrix=((1, 0, 0), (0, 1, 0), (0, 0, 1)), orient_matrix_type='GLOBAL', constraint_axis=(
         True, False, False), mirror=True, use_proportional_edit=False, proportional_edit_falloff='SMOOTH', proportional_size=1, use_proportional_connected=False, use_proportional_projected=False)
 
