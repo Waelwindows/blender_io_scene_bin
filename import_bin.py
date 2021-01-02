@@ -93,6 +93,13 @@ def shader_cloth(mat, dmat, tex_db, out):
                 mix.inputs[0].default_value = 1.
                 mat.node_tree.links.new(mix.inputs[1], imnode.outputs[1])
                 mat.node_tree.links.new(bsdf.inputs[4], mix.outputs[0])
+            #NORMAL MAP
+            elif tex.flags.map == 2:
+                imnode.name = "Normal"
+                image.colorspace_settings.name = "Raw"
+                normal = mat.node_tree.nodes.new("ShaderNodeNormalMap")
+                mat.node_tree.links.new(normal.inputs[1], imnode.outputs[0])
+                mat.node_tree.links.new(bsdf.inputs[5], normal.outputs[0])
             #SPECULAR MAP
             elif tex.flags.map == 3:
                 imnode.name = "Specular"
