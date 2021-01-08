@@ -65,27 +65,28 @@ def make_weight(i, id, obj, bone, group):
 
 def make_material(mesh, submesh, mats, tex_db):
     dmat = mats[submesh.material_index]
+    uvs = submesh.mat_uv_indicies
     mat = bpy.data.materials.new(name=dmat.name)
     mat.use_nodes = True
     out = mat.node_tree.nodes[1]
     mat.node_tree.nodes.remove(mat.node_tree.nodes[0])
 
     if dmat.shader == "CLOTH":
-        shader_cloth(mat, dmat, tex_db, out)
+        shader_cloth(mat, dmat, tex_db, out, uvs)
     elif dmat.shader == "ITEM":
         shader_item(mat, dmat, tex_db)
     else:
-        shader_cloth(mat, dmat, tex_db, out)
+        shader_cloth(mat, dmat, tex_db, out, uvs)
 
     mat.use_backface_culling = True
     mat.blend_method = "CLIP"
     mesh.materials.append(mat)
 
 
-def shader_cloth(mat, dmat, tex_db, out):
+def shader_cloth(mat, dmat, tex_db, out, uvs):
     bsdf = mat.node_tree.nodes.new("ShaderNodeEeveeSpecular")
 
-    for tex in dmat.textures:
+    for (i, tex) in enumerate(dmat.textures):
         if tex_db is None:
             break
         tex_name = tex_db.entries[tex.id]
@@ -96,7 +97,7 @@ def shader_cloth(mat, dmat, tex_db, out):
             if "TOONCURVE" in tex_name:
                 bsdf.inputs[2].default_value = 0.4
             # COLOR MAP
-            if tex.flags.map == 1 and "TOONCURVE" not in tex_name and "SDW" not in tex_name:
+            if tex.flags.map == 1 and "TOONCURVE" not in tex_name and uvs[i] == 0:
                 imnode.name = "Diffuse"
                 mat.node_tree.links.new(bsdf.inputs[0], imnode.outputs[0])
                 mix = mat.node_tree.nodes.new("ShaderNodeMath")
