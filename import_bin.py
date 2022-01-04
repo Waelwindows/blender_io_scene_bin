@@ -315,7 +315,7 @@ def make_arm(skel, connect_children):
         if "_ex" in b.name:
             bone.layers[1] = True
             bone.layers[0] = False
-        bone.matrix = make_matrix(b.bind_pose()) @ bone_correction_matrix
+        bone.matrix = make_matrix(b.inverse_bind_pose).inverted() @ bone_correction_matrix
         bone.length = 0.1
     for b in skel.bones:
         e = arm.data.edit_bones[b.name]
