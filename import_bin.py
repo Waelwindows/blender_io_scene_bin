@@ -51,16 +51,16 @@ def make_weights_submesh(obj, submesh, vbo, skel):
     sub = vbo
     for (i, bone_idx) in enumerate(submesh.bone_indicies):
         bone = skel.bones[bone_idx]
-        weights = zip(range(0, len(vbo.weights)), vbo.weights)
-        for (id, bone_weights) in weights:
-            make_weight(i, id, obj, bone, bone_weights.first)
-            make_weight(i, id, obj, bone, bone_weights.second)
-            make_weight(i, id, obj, bone, bone_weights.third)
-            make_weight(i, id, obj, bone, bone_weights.fourth)
+        weights = zip(range(0, len(vbo.joint_indices)), zip(vbo.joint_indices, vbo.joint_weights))
+        for (id, (idx, weights)) in weights:
+            make_weight(i, id, obj, bone, idx[0], weights[0])
+            make_weight(i, id, obj, bone, idx[1], weights[1])
+            make_weight(i, id, obj, bone, idx[2], weights[2])
+            make_weight(i, id, obj, bone, idx[3], weights[3])
 
-def make_weight(i, id, obj, bone, group):
-    if group.index is not None and group.index//3 == i:
-        get_group(obj, bone).add([id], group.weight, "ADD")
+def make_weight(i, id, obj, bone, idx, weight):
+    if idx != -1 and idx//3 == i:
+        get_group(obj, bone).add([id], weight, "ADD")
 
 
 def make_material(mesh, submesh, mats, tex_db):
