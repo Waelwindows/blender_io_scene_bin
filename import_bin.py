@@ -3,7 +3,12 @@ import bpy
 import bpy_extras
 import sys
 import itertools
-from . import objset
+
+try:
+    from . import objset
+except ImportError:
+    # import via PYTHONPATH
+    import objset
 
 def pairwise(iterable):
     from itertools import tee, islice

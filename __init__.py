@@ -14,12 +14,45 @@ bl_info = {
 import os
 print(os.getcwd())
 
-if "bpy" in locals():
-    import importlib
-    if "import_bin" in locals():
-        importlib.reload(import_bin)
-    if "import_txp" in locals():
-        importlib.reload(import_txp)
+try:
+    def reload_package(module_dict_main):
+        """Reload Scripts."""
+        import importlib
+        from pathlib import Path
+
+        def reload_package_recursive(current_dir, module_dict):
+            exts = [".py" ".so" ".pyd"]
+            for path in current_dir.iterdir():
+                if "__init__" in str(path) or path.stem not in module_dict:
+                    continue
+                if path.is_file() and path.suffix in exts:
+                    importlib.reload(module_dict[path.stem])
+                elif path.is_dir():
+                    reload_package_recursive(path, module_dict[path.stem].__dict__)
+
+        reload_package_recursive(Path(__file__).parent, module_dict_main)
+
+    if ".import_bin" in locals():
+        reload_package(locals())
+except ModuleNotFoundError as exc:
+    print(exc)
+    print('bpy not found.')
+
+try:
+    from . import objset
+except ImportError:
+    # import via PYTHONPATH
+    import objset
+try:
+    from . import txp
+except ImportError:
+    # import via PYTHONPATH
+    import txp
+try:
+    from . import diva_db
+except ImportError:
+    # import via PYTHONPATH
+    import diva_db
 
 import bpy
 from bpy.props import (
@@ -74,8 +107,6 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
         pass
 
     def execute(self, context):
-        from . import objset
-        from . import txp
         from . import import_bin
         from . import import_txp
         import os

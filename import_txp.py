@@ -4,9 +4,18 @@ import bpy_extras
 import sys
 import itertools
 import imbuf
-from . import txp
-from . import diva_db
 from bpy_extras import image_utils
+
+try:
+    from . import txp
+except ImportError:
+    # import via PYTHONPATH
+    import txp
+try:
+    from . import diva_db
+except ImportError:
+    # import via PYTHONPATH
+    import diva_db
 
 def import_textures(path, tex_names):
     for name in tex_names:
