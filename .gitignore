@@ -1,6 +1,9 @@
-*.so
 __pycache__/*
 tags
+# Dynamic libraries
+*.so
+*.pyd
+*.dll
 # Nix stuff
 result
 .direnv/
