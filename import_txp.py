@@ -4,6 +4,7 @@ import bpy_extras
 import sys
 import itertools
 import imbuf
+import tempfile
 from bpy_extras import image_utils
 
 try:
@@ -29,18 +30,20 @@ def import_textures(path, tex_names):
         image.name = name
 
 def make_images(txp, tex_names):
-    for (i, map) in enumerate(txp.maps):
-        if len(map.sides) == 1:
-            mip = map.sides[0].mipmaps[0]
-            pixels = mip.to_rgba()
-            if pixels is not None:
-                try:
-                    image = bpy.data.images[tex_names[i]]
-                except KeyError:
-                    bpy.ops.image.new(name=tex_names[i], width=mip.width, height=mip.height, generated_type='BLANK', float=True)
-                image = bpy.data.images[tex_names[i]]
-                print(len(pixels))
-                pixels = itertools.chain.from_iterable(pixels)
-                pixels = [(x/256)**2.2 for x in pixels]
-                # pixels = list(pixels)
-                image.pixels = pixels
+    print("Importing txps")
+    print(txp.textures)
+    for txp_tex, name in zip(txp.textures, tex_names):
+        tex = None
+        try:
+            with tempfile.NamedTemporaryFile(suffix=".dds", delete=False) as file:
+                file.write(bytes(txp_tex.to_dds_bytes()))
+                print(f"image is at {file.name}")
+                tex = image_utils.load_image(
+                        file.name,
+                        place_holder=True,
+                    )
+                tex.name = name
+        except Exception as e:
+            if tex is not None:
+                bpy.data.images.remove(tex)
+            raise e
