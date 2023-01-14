@@ -17,12 +17,14 @@ def pairwise(iterable):
     return zip(a, islice(b, 1, None))
 
 
-def make_uv(mesh, uv):
+def make_uv(mesh, uv, flip_uvs):
     if len(uv) != 0:
         uv_lay = mesh.uv_layers.new(do_init=False)
         for loop in mesh.loops:
             idx = loop.vertex_index
-            uv_lay.data[loop.index].uv = uv[idx]
+            u, v = uv[idx]
+            v *= -1 if flip_uvs else 1
+            uv_lay.data[loop.index].uv = [u, v]
 
 def make_vertex_color(mesh, col):
     if len(col) != 0:
@@ -158,7 +160,7 @@ def shader_item(mat, dmat, tex_db):
     print("going to connect to out")
     mat.node_tree.links.new(out.inputs[0], mix.outputs[0])
 
-def make_submesh(submesh, vbo, mats, tex_db, skel):
+def make_submesh(submesh, vbo, mats, tex_db, skel, flip_uvs):
     mesh = bpy.data.meshes.new("temp")  # add the new mesh
     obj = bpy.data.objects.new("temp", mesh)
     col = bpy.data.collections.get("Collection")
@@ -174,10 +176,10 @@ def make_submesh(submesh, vbo, mats, tex_db, skel):
     mesh.use_auto_smooth = True
     mesh.normals_split_custom_set_from_vertices(vbo.normals)
 
-    make_uv(mesh, vbo.uv1)
-    make_uv(mesh, vbo.uv2)
-    make_uv(mesh, vbo.uv3)
-    make_uv(mesh, vbo.uv4)
+    make_uv(mesh, vbo.uv1, flip_uvs)
+    make_uv(mesh, vbo.uv2, flip_uvs)
+    make_uv(mesh, vbo.uv3, flip_uvs)
+    make_uv(mesh, vbo.uv4, flip_uvs)
     
     make_vertex_color(mesh, vbo.color1)
     make_vertex_color(mesh, vbo.color2)
@@ -198,13 +200,13 @@ def make_submesh(submesh, vbo, mats, tex_db, skel):
 
     return obj
 
-def make_mesh(dmesh, mats, skel, arm, tex_db):
+def make_mesh(dmesh, mats, skel, arm, tex_db, flip_uvs):
     prev = None
     vbo = dmesh.vertex_buffers
     cur = 0
     for submesh in dmesh.submeshes:
         sub_vbo = dmesh.get_submesh_vbo(submesh)
-        new = make_submesh(submesh, sub_vbo.vbo, mats, tex_db, skel)
+        new = make_submesh(submesh, sub_vbo.vbo, mats, tex_db, skel, flip_uvs)
         if prev is None:
             prev = new
         else:
@@ -349,13 +351,13 @@ def make_matrix(mat):
     return mathutils.Matrix([mat[0:4], mat[4:8], mat[8:12], mat[12:16]])
 
 
-def make_object(obj, tex_db, connect_children):
+def make_object(obj, tex_db, connect_children, flip_uvs):
     make_root(obj.skeleton, connect_children)
     root = bpy.context.active_object
     root.name = obj.name
     for mesh in obj.meshes:
     # mesh = obj.meshes[0]
-        mesh = make_mesh(mesh, obj.materials, obj.skeleton, root, tex_db)
+        mesh = make_mesh(mesh, obj.materials, obj.skeleton, root, tex_db, flip_uvs)
         child = bpy.context.active_object
         bpy.ops.object.shade_smooth()
         child.parent = root

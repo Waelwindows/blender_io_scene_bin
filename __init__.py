@@ -103,6 +103,12 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
             default=True,
             )
 
+    flip_uvs: BoolProperty(
+            name="Flip UVs",
+            description="Flips UVs vertically to align with textures",
+            default=True,
+            )
+
     def draw(self, context):
         pass
 
@@ -132,7 +138,7 @@ class ImportBIN(bpy.types.Operator, ImportHelper):
                 else:
                     import_txp.import_textures(dirname, tex_names)
                 for obj in object_set.objects:
-                    import_bin.make_object(obj, tex_db, self.connect_child)
+                    import_bin.make_object(obj, tex_db, self.connect_child, self.flip_uvs)
             ret = {'FINISHED'}
             return ret
 
@@ -160,6 +166,7 @@ class BIN_PT_import_include(bpy.types.Panel):
         layout.prop(operator, "connect_child")
         layout.prop(operator, "tex_db_path")
         layout.prop(operator, "import_textures")
+        layout.prop(operator, "flip_uvs")
 
 def menu_func_import(self, context):
     self.layout.operator(ImportBIN.bl_idname, text="SEGA Object Set (_obj.bin)")
