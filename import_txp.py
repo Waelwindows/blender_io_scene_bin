@@ -33,6 +33,8 @@ def make_images(txp, tex_names):
     print("Importing txps")
     print(txp.textures)
     for txp_tex, name in zip(txp.textures, tex_names):
+        if name in [x.name for x in bpy.data.images]:
+            continue
         tex = None
         try:
             with tempfile.NamedTemporaryFile(suffix=".dds", delete=False) as file:
