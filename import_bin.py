@@ -94,9 +94,7 @@ def shader_cloth(mat, dmat, tex_db, out, uvs):
     bsdf = mat.node_tree.nodes.new("ShaderNodeEeveeSpecular")
 
     for (i, tex) in enumerate(dmat.textures):
-        if tex_db is None:
-            break
-        tex_name = tex_db.entries[tex.id]
+        tex_name = tex_db.entries[tex.id] if tex_db else str(tex.id)
         try:
             image = bpy.data.images[tex_name]
             imnode = mat.node_tree.nodes.new("ShaderNodeTexImage")
@@ -143,9 +141,7 @@ def shader_item(mat, dmat, tex_db):
     mat.node_tree.links.new(mix.inputs[1], trans.outputs[0])
     mat.node_tree.links.new(mix.inputs[2], bsdf.outputs[0])
     for tex in dmat.textures:
-        if tex_db is None:
-            break
-        tex_name = tex_db.entries[tex.id]
+        tex_name = tex_db.entries[tex.id] if tex_db else str(tex.id)
         try:
             image = bpy.data.images[tex_name]
             imnode = mat.node_tree.nodes.new("ShaderNodeTexImage")
