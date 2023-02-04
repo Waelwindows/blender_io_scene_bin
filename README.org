@@ -1,0 +1,56 @@
+#+title: Blender Objset Plugin
+
+Blender importer for SEGA's Object Set format.
+
+[[./assets/preview.png]]
+
+* Features
+** Import
+*** Models [40%]
+- [-] Vertices
+- [-] Normals
+- [X] UVs
+- [X] Color Data
+- [-] Weights
+*** Skinning [0%]
+**** Skeletons
+- [X] Bones
+**** Constraints [0%]
+**** Exdata [0%]
+*** Materials [0%]
+**** AFT Style [0%]
+- [-] Base Shader
+- [ ] Hair Shader
+- [ ] Item Shader
+**** [ ] F Style [0%]
+- [ ] Base Shader
+*** Textures
+Texture import works via exporting =.DDS=​s using =txp=.
+** TODO Export
+* Usage
+You can import objset =.bin= files from the ~File >> Import~ menu.
+
+1. Click on ~File >> Import >> SEGA Object Set (_obj.bin)~.
+2. (Optional) Set the texture db path
+3. Select file
+4. Confirm!
+5. ????
+6. Profit!!
+
+* Installation
+
+** Manual
+1. Obtain a copy of this repo (e.g. use the =Download= button on GitHub)
+2. Install the plugin via the builtin blender plugin system.
+3. Obtain the appropriate wheels for your platfrom for [[https://github.com/diva-rust-modding/txp][txp]], [[https://github.com/diva-rust-modding/objset][objset]], and [[https://github.com/diva-rust-modding/diva_db][diva_db]].
+4. Unzip said wheels and extract the dynamic library from it. (e.g. for =objset-0.1.0-cp37-abi3-macosx_11_0_arm64.whl= that would be =objset.abi3.so=)
+5. Place said libraries inside the plugin folder that blender made.
+
+* License
+This project is licensed under the Apache License, Version 2.0 ([[LICENSE][LICENSE]] or http://www.apache.org/licenses/LICENSE-2.0)
+* Special Thanks to
+- [[https://github.com/blueskythlikesclouds][Skyth]]
+- [[https://github.com/korenkonder][korenkonder]]
+- [[https://www.deviantart.com/chrrox][chrrox]]
+- [[https://www.deviantart.com/minmode][minmode]]
+- [[https://github.com/featjinsoul][feat_jinsoul]]
